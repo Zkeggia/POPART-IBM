@@ -12,6 +12,7 @@
 
     You should have received a copy of the GNU General Public License
     along with the PopART IBM.  If not, see <http://www.gnu.org/licenses/>.
+    
  */
 
 /************************************************************************/
@@ -167,6 +168,7 @@ int main(int argc,char *argv[]){
         add_slash(output_file_directory);
         join_strings_with_check(output_file_directory, "Output", LONGSTRINGLENGTH - 1,
             "'Output' and output_file_directory in main()");
+        
     }
     
     /* Now parse any other command line arguments: */
@@ -529,7 +531,7 @@ int main(int argc,char *argv[]){
                 fit_flag = carry_out_processes(year, *fitting_data, patch, overall_partnerships,
                     output, rng_seed_offset, rng_seed_offset_PC, debug, file_data_store,
                     is_counterfactual);
-                
+
                 if(fit_flag == -1){
                     printf("Error.  Unexpected return from carry_out_processes(). Exiting.\n");
                     printf("LINE %d; FILE %s\n", __LINE__, __FILE__);
@@ -708,7 +710,7 @@ int main(int argc,char *argv[]){
                     break;
                 }
             } // for(year ... )
-            
+
             /*********************************************************/
             /*** Printing stuff ***/
             /*********************************************************/
@@ -769,21 +771,23 @@ int main(int argc,char *argv[]){
 
             /* Only output the full stuff if run successfully fitted data. */
             if(fit_flag == 1){
-                if(WRITE_PHYLOGENETICS_OUTPUT >= 1 && PRINT_EACH_RUN_OUTPUT == 1){
+                for(p=0;p<NPATCHES;p++){
+                    if(WRITE_PHYLOGENETICS_OUTPUT >= 1 && PRINT_EACH_RUN_OUTPUT == 1){
                     /* call files to write individual data and transmission data to csv files: */
-                    write_phylo_transmission_data(file_data_store, 
-                        output->phylogenetics_output_string);
-                    
-                    write_phylo_individual_data(file_data_store, 
-                        patch[PHYLO_PATCH].individual_population, patch[PHYLO_PATCH].id_counter);
+                        write_phylo_transmission_data(file_data_store, 
+                            output->phylogenetics_output_string[p],p);
+                        //printf("patch %d",p);
+                        write_phylo_individual_data(file_data_store, 
+                            patch[p].individual_population, patch[p].id_counter,p);
+                    }
+                    /* Write csv file of information to look at how long people live for when on ART. */
+                    if(WRITE_HIVSURVIVAL_OUTPUT == 1 && PRINT_EACH_RUN_OUTPUT == 1){
+                        write_hivpos_individual_data(file_data_store,
+                        patch[p].individual_population, patch[p].id_counter,p); 
+                    }                       
                 }
             }
             
-            /* Write csv file of information to look at how long people live for when on ART. */
-            if(WRITE_HIVSURVIVAL_OUTPUT == 1 && PRINT_EACH_RUN_OUTPUT == 1){
-                write_hivpos_individual_data(file_data_store,
-                    patch[PHYLO_PATCH].individual_population, patch[PHYLO_PATCH].id_counter);
-            }
 
             if(WRITE_DEBUG_HIV_DURATION_KM == 1 && PRINT_EACH_RUN_OUTPUT == 1){
                 write_hiv_duration_km_end_of_simulation(patch, 
@@ -980,11 +984,11 @@ int main(int argc,char *argv[]){
         
     } // else if SIMPLE_PARTNERSHIP_CHECK == 1
     
+            printf("fit %d",patch[0].i_fit);
     
     /*****************************************************/
     /*** FREEING MEMORY                                ***/
     /*****************************************************/
-    
     for(p = 0; p < NPATCHES; p++){
         for(i_run = 0; i_run < n_runs; i_run++){
             free(allrunparameters[p][i_run].chips_params);
@@ -992,19 +996,19 @@ int main(int argc,char *argv[]){
             free(allrunparameters[p][i_run].DHS_params);
         }
     }
-    
+ 
     free_pop_memory(pop,allrunparameters);
     free_output_memory(output);
-    
+ 
     /* The fitting data array is allocated separately so free it separately: */
     for(p = 0; p < NPATCHES; p++){
-        free(fitting_data[p]);
+        //free(fitting_data[p]);
         
         if(WRITE_CALIBRATION == 1){
             free(calibration_output_filename[p]);
         }
     }
-    
+
     free(file_data_store);
     free(file_labels);
     
