@@ -164,7 +164,8 @@ void newick(int const & root, vector<tuple<int,int,double,int>> const & phylo, s
         if(person == -1) {
             cerr << "Encountered a leaf not associated with a person" << endl; exit(1);
         }
-        s += to_string(root); s += "|"; s += num2name[person]; s += "|"; s += to_string(time);
+        //s += to_string(root); s += "|"; s += num2name[person]; s += "|"; s += to_string(time);
+        s += num2name[person];
     }
 
     // if dummy transmission event node, output unifurcation

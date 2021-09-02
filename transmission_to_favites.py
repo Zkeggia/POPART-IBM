@@ -21,10 +21,9 @@ python python/generate_dot.py \
     --sampled_individuals=50
 
 
-runfile('transmission_to_favites.py', args = '-o /home/fra/Desktop/Oxford/popart/Coatran/CoaTran/output --start_date 1970 --end_date 2018 --inputfilename_trans_p0 phylogenetic_transmission_CL01_Za_B_V1.2_patch0_Rand10_Run1_PCseed0_0.csv --inputfilename_trans_p1 phylogenetic_transmission_CL03_Za_C_V1.2_patch1_Rand10_Run1_PCseed0_0.csv --inputfilename_indiv_p0 phylogenetic_individualdata_CL01_Za_B_V1.2_patch0_Rand10_Run1_PCseed0_0.csv --inputfilename_indiv_p1 phylogenetic_individualdata_CL03_Za_C_V1.2_patch1_Rand10_Run1_PCseed0_0.csv')    
+runfile('transmission_to_favites.py', args = '-o output --start_date 1970 --end_date 2018 --inputfilename_trans_p0 phylogenetic_transmission_CL01_Za_B_V1.2_patch0_Rand10_Run1_PCseed0_0.csv --inputfilename_trans_p1 phylogenetic_transmission_CL03_Za_C_V1.2_patch1_Rand10_Run1_PCseed0_0.csv --inputfilename_indiv_p0 phylogenetic_individualdata_CL01_Za_B_V1.2_patch0_Rand10_Run1_PCseed0_0.csv --inputfilename_indiv_p1 phylogenetic_individualdata_CL03_Za_C_V1.2_patch1_Rand10_Run1_PCseed0_0.csv')    
 
 """
-
 import pandas as pd, numpy as np
 import argparse
 
@@ -149,7 +148,13 @@ if __name__ == "__main__":
       
     parser.add_argument('-n','--sampled_individuals',  required = False, \
         help = "number of sampled individuals", type = int, default = 50)
-    
+
+    parser.add_argument('-s','--start_sampling',  required = False, \
+        help = "when to start sampling individuals", type = int, default = 1990)
+    parser.add_argument('-e','--end_sampling',  required = False, \
+        help = "when to end sampling individuals", type = int, default = 2018)
+                
+        
     parser.add_argument('-p','--patch', nargs = '+', required = False, \
         help = "Patch of infected individuals to focus on", type = int, default = [0])
     
@@ -254,9 +259,7 @@ if __name__ == "__main__":
 
     
     f.write("None"+TAB+"SUPERFAKER"+TAB+"1968"+'\n')
-    
-    g.write('#label'+TAB+'date')
-    g.write("SUPERFAKER"+TAB+"1968.5"+'\n')
+    #g.write("SUPERFAKER"+TAB+"1970"+'\n')
     
     for index, row in all_infection_events.iterrows():
         
@@ -315,10 +318,17 @@ if __name__ == "__main__":
                         
     f.close()
     
+
+    condition1 = all_infection_events.TimeOfInfection >= args.start_sampling
+    condition2 = all_infection_events.TimeOfInfection <= args.end_sampling
     
-    sampled_index = np.sort(np.random.choice(all_infection_events.index, 350, replace=False))
     
-    sampled_infected = all_infection_events.loc[sampled_index]
+    
+    tosample =  all_infection_events[condition1 & condition2]
+
+    sampled_index = np.sort(np.random.choice(tosample.index, args.sampled_individuals, replace=False))
+    
+    sampled_infected = tosample.loc[sampled_index]
     for index, row in sampled_infected.iterrows():
         g.write(row.IDINFECTED+TAB+str(row.TimeOfInfection+1)+'\n')
     g.close()

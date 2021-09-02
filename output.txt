@@ -1,0 +1,4 @@
+/home/fra/Projects/POPART-IBM
+Offset for PC is 0
+Cohort size = 984
+fit 0
