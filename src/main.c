@@ -623,19 +623,7 @@ int main(int argc,char *argv[]){
                             n_infected_total + p, year + 1, 0);
                         store_annual_partnerships_outputs(patch, p, output, overall_partnerships,
                             n_infected_total + p, year+1, 1);
-                        }
-
-                    /* Print the sexual network every year for 5 years (used in DSMB 2016). */
-                    if(
-                        (year >= 1999 && year < 2005) && 
-                        (WRITE_PARTNERSHIP_NETWORK_SNAPSHOT==1) && 
-                        (PRINT_EACH_RUN_OUTPUT==1)
-                    ){
-                        print_partnership_network(file_data_store, output_file_directory,
-                        file_labels, patch[p].individual_population, patch[p].id_counter, 
-                        year + 1, p);
-                    }
-                    
+                        }                    
                     if(
                         (p == 0) && 
                         (WRITE_PARTNERS_OUTSIDE_COMMUNITY == 1) && 
@@ -704,6 +692,17 @@ int main(int argc,char *argv[]){
                         write_demographics_byage_gender(patch, p, (float) year, file_data_store);
                     }
                 }
+                /* Print the sexual network every year for 5 years (used in DSMB 2016). */
+                if(
+                    (year ==1990 || year == 2000 || year==2010 || year==2018) && 
+                    (WRITE_PARTNERSHIP_NETWORK_SNAPSHOT==1) && 
+                    (PRINT_EACH_RUN_OUTPUT==1)
+                ){
+                    print_partnership_network(file_data_store, output_file_directory,
+                    file_labels,patch, 
+                    year + 1, p);
+                }
+
                 /* At least one patch has died out, and we are no longer seeding HIV. */
                 if(fit_flag == 0 && PRINT_ALL_RUNS == 0){
                     printf("Stopping this run in year %i\n",year);

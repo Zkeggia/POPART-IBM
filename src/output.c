@@ -3175,13 +3175,17 @@ void write_hivpos_individual_data(file_struct *file_data_store, individual *indi
 
 
 
-void print_partnership_network(file_struct *file_data_store, char *output_file_directory, file_label_struct *file_labels, individual *individual_population, long id_counter, int year, int p){
+void print_partnership_network(file_struct *file_data_store, char *output_file_directory, file_label_struct *file_labels,  patch_struct *patch,  int year, int p){
     long n_id, gender;
+    float ageid, agepart;
     int n_partners, i_partner;
     long partner_id;
     int partner_patch;
     double duration;
 
+
+    long id_counter;
+    individual *individual_population;
     FILE *PARTNERSHIP_NETWORK_OUTFILE;
     char partnership_network_outfilename[LONGSTRINGLENGTH];
     make_filenames_for_snapshot(partnership_network_outfilename, output_file_directory, file_labels, year, p, "Partnership_network");
@@ -3194,22 +3198,37 @@ void print_partnership_network(file_struct *file_data_store, char *output_file_d
         fflush(stdout);
         exit(1);
     }
+    fprintf(PARTNERSHIP_NETWORK_OUTFILE, "n_id,partner_id,id_patch,partner_patch,duration,DoB_1,DoB_2\n");
+    int patchno=0;
+    for (patchno=0;patchno<2;patchno++){
+        individual_population=patch[patchno].individual_population; 
+        id_counter=patch[patchno].id_counter;
+        for (n_id=0; n_id<id_counter; n_id++){
+            /* Check that the person is not dead: */
+            if (individual_population[n_id].cd4!=DEAD){
 
-    for (n_id=0; n_id<id_counter; n_id++){
-        /* Check that the person is not dead: */
-        if (individual_population[n_id].cd4!=DEAD){
+                gender = individual_population[n_id].gender;
 
-            gender = individual_population[n_id].gender;
+                n_partners = individual_population[n_id].n_partners;
 
-            n_partners = individual_population[n_id].n_partners;
+                ageid = individual_population[n_id].DoB;
+                for(i_partner=0;i_partner<n_partners;i_partner++){
 
-            for(i_partner=0;i_partner<n_partners;i_partner++){
-                partner_id = individual_population[n_id].partner_pairs[i_partner]->ptr[1-gender]->id;
-                partner_patch = individual_population[n_id].partner_pairs[i_partner]->ptr[1-gender]->patch_no;
-                duration = individual_population[n_id].partner_pairs[i_partner]->duration_in_time_steps * TIME_STEP;
-                if (partner_id>=n_id){
-                    //fprintf("%li %li %i %6.4f\n",n_id,partner_id,partner_patch==p,duration);
-                    fprintf(PARTNERSHIP_NETWORK_OUTFILE,"%li %li %i %6.4f\n",n_id,partner_id,partner_patch==p,duration);
+                    partner_id = individual_population[n_id].partner_pairs[i_partner]->ptr[1-gender]->id;
+                    partner_patch = individual_population[n_id].partner_pairs[i_partner]->ptr[1-gender]->patch_no;
+                    agepart = individual_population[n_id].partner_pairs[i_partner]->ptr[1-gender]->DoB;
+
+                    duration = individual_population[n_id].partner_pairs[i_partner]->duration_in_time_steps * TIME_STEP;
+                    if (gender==MALE){
+                            fprintf(PARTNERSHIP_NETWORK_OUTFILE, "%li,%li,%i,%i,%6.4f,%.4f,%.4f\n",n_id,partner_id,individual_population[n_id].patch_no,partner_patch,duration,ageid,agepart);
+                    }                
+                    //if (partner_id>=n_id){
+                        //fprintf("%li %li %i %6.4f\n",n_id,partner_id,partner_patch==p,duration);
+                        //fprintf(PARTNERSHIP_NETWORK_OUTFILE,"%li %li %i %6.4f\n",n_id,partner_id,partner_patch==p,duration);
+                        //if (individual_population[n_id].patch_no==partner_patch){
+                        //    fprintf(PARTNERSHIP_NETWORK_OUTFILE,"%li %li %i %6.4f\n",n_id,partner_id,partner_patch==p,duration);
+                        //}
+                    
                 }
             }
         }

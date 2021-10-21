@@ -21,7 +21,7 @@ python python/generate_dot.py \
     --sampled_individuals=50
 
 
-runfile('transmission_to_favites.py', args = '-o output --start_date 1970 --end_date 2018 --inputfilename_trans_p0 phylogenetic_transmission_CL01_Za_B_V1.2_patch0_Rand10_Run1_PCseed0_0.csv --inputfilename_trans_p1 phylogenetic_transmission_CL03_Za_C_V1.2_patch1_Rand10_Run1_PCseed0_0.csv --inputfilename_indiv_p0 phylogenetic_individualdata_CL01_Za_B_V1.2_patch0_Rand10_Run1_PCseed0_0.csv --inputfilename_indiv_p1 phylogenetic_individualdata_CL03_Za_C_V1.2_patch1_Rand10_Run1_PCseed0_0.csv')    
+runfile('transmission_to_favites.py', args = '-o output --start_date 1970 --end_date 2018 --inputfilename_trans_p0 Outputs/phylogenetic_transmission_CL01_Za_B_V1.2_patch0_Rand10_Run497_PCseed0_0.csv --inputfilename_trans_p1 Outputs/phylogenetic_transmission_CL03_Za_C_V1.2_patch1_Rand10_Run497_PCseed0_0.csv --inputfilename_indiv_p0 Outputs/phylogenetic_individualdata_CL01_Za_B_V1.2_patch0_Rand10_Run497_PCseed0_0.csv --inputfilename_indiv_p1 Outputs/phylogenetic_individualdata_CL03_Za_C_V1.2_patch1_Rand10_Run497_PCseed0_0.csv')    
 
 """
 import pandas as pd, numpy as np
@@ -39,6 +39,29 @@ col_risk_high = "#d7191c"
 # Blue/green for male/female (see popart_style_guide)
 col_male = "#1f78b4"
 col_female = "#e41a1c" #"#33a02c"
+
+# Output
+def swap_rows(df, i1, i2):
+    a, b = df.iloc[i1, :].copy(), df.iloc[i2, :].copy()
+    df.iloc[i1, :], df.iloc[i2, :] = b, a
+    return df
+
+def lookforchildren(df, father, time, firstrow,intersection):
+    elements_infected_by_elem=df.loc[(df.IDINFECTOR == father ) & (df.TimeOfInfection == time)].IDINFECTED
+    #print("father:")
+    #print(father)
+    updatedrow = firstrow
+    dataf = df.copy()
+    for element_i in elements_infected_by_elem:
+        if element_i in intersection:
+            #print("infected:")            
+
+
+            dataf=swap_rows(df,df.loc[df.IDINFECTED == element_i].index[0],updatedrow)
+            updatedrow = firstrow+1
+            dataf,updatedrow=lookforchildren(df, element_i, time, updatedrow,intersection)
+    return dataf,updatedrow
+    
 
 def consolidate_transmission(all_infection_events):
     """
@@ -61,51 +84,31 @@ def consolidate_transmission(all_infection_events):
     dftransmissions=all_infection_events.sort_values('TimeOfInfection',ignore_index=True)    
     #I could do groupby but I think it might mess up the order when going back?
     uniquetimes = dftransmissions.TimeOfInfection.unique()
-    
     for time in uniquetimes:
-        rows = dftransmissions.loc[dftransmissions.TimeOfInfection==time]
-        infectors = rows.IDINFECTOR
-        infected  = rows.IDINFECTED
-        intersection = np.intersect1d(infectors,infected)  
-        firstrow = rows.index[0]
-        
-        for element in intersection:    
-            #Move intersection elements (when infected) to the top of the list
+                #print(dftransmissions.loc[dftransmissions.TimeOfInfection==time])     
 
-            #place_infector = dftransmissions.loc[dftransmissions.IDINFECTOR == element]
-            place_infected = dftransmissions.loc[dftransmissions.IDINFECTED == element]
-            temp_0 = dftransmissions.iloc[firstrow]
-            dftransmissions.iloc[firstrow] = dftransmissions.iloc[place_infected.index[0]]
-            dftransmissions.iloc[place_infected.index[0]] = temp_0
-            firstrow = firstrow + 1
-    
-    dftransmissions = dftransmissions.reset_index(drop=True)
+                rows = dftransmissions.loc[dftransmissions.TimeOfInfection==time]
+                infectors = rows.IDINFECTOR
+                infected  = rows.IDINFECTED
+                intersection = np.intersect1d(infectors,infected)  
+                #print(dftransmissions.loc[dftransmissions.TimeOfInfection==time].index)
+                
+                firstrow=rows.index[0]
+                #print(intersection)
+                #print(firstrow)
+                for element in intersection:                        
+                        who_gave_infection_to_elem=dftransmissions.loc[dftransmissions.IDINFECTED == element]
+                        
+                        if who_gave_infection_to_elem.IDINFECTOR.to_list() not in intersection:
+                            #Not in intersection can go top
+                            #print(element,who_gave_infection_to_elem.index[0],firstrow)
+                            dftransmissions=swap_rows(dftransmissions,who_gave_infection_to_elem.index[0],firstrow)
+                            firstrow = firstrow+1
+                
+                            dftransmissions,firstrow=lookforchildren(dftransmissions, element, time, firstrow,intersection)
+                
 
-    #Need to repeat because I am not sure about the indices swapping
-    for time in uniquetimes:
-        rows = dftransmissions.loc[dftransmissions.TimeOfInfection==time]
-        infectors = rows.IDINFECTOR
-        infected  = rows.IDINFECTED
-        intersection = np.intersect1d(infectors,infected)  
-        firstrow = rows.index[0]
-        
-        for element in intersection:    
-            place_infected = dftransmissions.loc[dftransmissions.IDINFECTED == element]
-            infector= dftransmissions.iloc[place_infected.index[0]].IDINFECTOR      
-            place_infector = dftransmissions.loc[dftransmissions.IDINFECTED == infector]
-            
-            if infector in intersection:
-                if place_infected.index[0] < place_infector.index[0]:
-                    #This means that the infector of the element has been infected before infecting
-                    
-                    #Therefore, swap them!
-                    temp_0 = dftransmissions.iloc[firstrow]
-                    dftransmissions.iloc[firstrow] = dftransmissions.iloc[place_infector.index[0]]
-                    dftransmissions.iloc[place_infector.index[0]] = temp_0
-                    firstrow = firstrow + 1                    
-    
-    
-    return dftransmissions.reset_index(drop=True)   
+    return dftransmissions 
     
 
 def consolidate_individual_files(individual0, individual1):
@@ -144,13 +147,14 @@ if __name__ == "__main__":
     
     # Process the input argument
     parser = argparse.ArgumentParser()
+    
 
-      
+    parser.add_argument('-g','--seed', required=False, help='seed of the number generator for testing', type=int, default=1)
     parser.add_argument('-n','--sampled_individuals',  required = False, \
-        help = "number of sampled individuals", type = int, default = 50)
+        help = "number of sampled individuals", type = int, default = 25)
 
     parser.add_argument('-s','--start_sampling',  required = False, \
-        help = "when to start sampling individuals", type = int, default = 1990)
+        help = "when to start sampling individuals", type = int, default = 2014)
     parser.add_argument('-e','--end_sampling',  required = False, \
         help = "when to end sampling individuals", type = int, default = 2018)
                 
@@ -184,7 +188,6 @@ if __name__ == "__main__":
       help = "Input filename (individuals in patch 1)")
     
     args = parser.parse_args()
-    
     df_indiv_patch0 = pd.read_csv(args.inputfilename_indiv_p0, sep = SEP)
     df_indiv_patch1 = pd.read_csv(args.inputfilename_indiv_p1, sep = SEP)
     df_trans_patch0 = pd.read_csv(args.inputfilename_trans_p0, sep = SEP)
@@ -262,7 +265,8 @@ if __name__ == "__main__":
     #g.write("SUPERFAKER"+TAB+"1970"+'\n')
     
     for index, row in all_infection_events.iterrows():
-        
+
+            
         if row.SEXINFECTED == row.SEXINFECTOR:
             print("Error, same sex infection")
             print("IDINFECTOR", row.IDINFECTOR)
@@ -319,7 +323,7 @@ if __name__ == "__main__":
     f.close()
     
 
-    condition1 = all_infection_events.TimeOfInfection >= args.start_sampling
+    condition1 = all_infection_events.DODINFECTED >= args.start_sampling
     condition2 = all_infection_events.TimeOfInfection <= args.end_sampling
     
     
@@ -329,8 +333,89 @@ if __name__ == "__main__":
     sampled_index = np.sort(np.random.choice(tosample.index, args.sampled_individuals, replace=False))
     
     sampled_infected = tosample.loc[sampled_index]
+
+    import random
+    random.seed(args.seed)    
+
     for index, row in sampled_infected.iterrows():
-        g.write(row.IDINFECTED+TAB+str(row.TimeOfInfection+1)+'\n')
+        max_time = min(row.DODINFECTED, args.end_sampling)
+        min_time = max(row.TimeOfInfection,args.start_sampling)
+        if max_time<min_time:
+            print(max_time,min_time)
+        time = random.uniform(min_time,max_time)
+        g.write(row.IDINFECTED+TAB+str(time)+'\n')
     g.close()
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+#temp_0 = dftransmissions.iloc[place_infected.index[0]].copy()
+#dftransmissions.iloc[place_infected.index[0]] = dftransmissions.iloc[who_gave_infection_to_elem.index[0]].copy()
+#dftransmissions.iloc[who_gave_infection_to_elem.index[0]] = temp_0.copy()  
+#print(dftransmissions.loc[dftransmissions.TimeOfInfection==time])
+#who_got_infected_by_elem=dftransmissions.loc[dftransmissions.IDINFECTOR == element]
+#print(who_got_infected_by_elem)
+#if infector in intersection:
+#    if place_infected.index[0] < place_infector.index[0]:   
+                                        
+                            
+    '''
+    for time in uniquetimes:
+        rows = dftransmissions.loc[dftransmissions.TimeOfInfection==time]
+        infectors = rows.IDINFECTOR
+        infected  = rows.IDINFECTED
+        intersection = np.intersect1d(infectors,infected)  
+        firstrow = rows.index[0]
+        if time==1979.5208:
+            print(intersection)
+        for element in intersection:    
+            #Move intersection elements (when infected) to the top of the list
+
+            place_infector = dftransmissions.loc[dftransmissions.IDINFECTOR == element]
+            if time==1979.5208:
+                print(place_infector)            
+            place_infected = dftransmissions.loc[dftransmissions.IDINFECTED == element]
+            if time==1979.5208:
+                print(place_infected)
+            temp_0 = dftransmissions.iloc[firstrow]
+            dftransmissions.iloc[firstrow] = dftransmissions.iloc[place_infected.index[0]]
+            dftransmissions.iloc[place_infected.index[0]] = temp_0
+            firstrow = firstrow + 1
+    
+    dftransmissions = dftransmissions.reset_index(drop=True)
+
+    #Need to repeat because I am not sure about the indices swapping
+    for time in uniquetimes:
+        rows = dftransmissions.loc[dftransmissions.TimeOfInfection==time]
+        infectors = rows.IDINFECTOR
+        infected  = rows.IDINFECTED
+        intersection = np.intersect1d(infectors,infected)  
+        firstrow = rows.index[0]
+        
+        for element in intersection:    
+            place_infected = dftransmissions.loc[dftransmissions.IDINFECTED == element]
+            infector= dftransmissions.iloc[place_infected.index[0]].IDINFECTOR      
+            place_infector = dftransmissions.loc[dftransmissions.IDINFECTED == infector]
+            
+            if infector in intersection:
+                if place_infected.index[0] < place_infector.index[0]:
+                    #This means that the infector of the element has been infected before infecting
+                    
+                    #Therefore, swap them!
+                    temp_0 = dftransmissions.iloc[firstrow]
+                    dftransmissions.iloc[firstrow] = dftransmissions.iloc[place_infector.index[0]]
+                    dftransmissions.iloc[place_infector.index[0]] = temp_0
+                    firstrow = firstrow + 1                    
+    
+    '''
     
