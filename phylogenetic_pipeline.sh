@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#$ -P fraser.prjc
+#$ -q long.qc
+#$ -N popart_zk_run
+#$ -cwd
+#$ -e log
+#$ -o log
+#$ -t 1-2:1
+#$ -cwd
 #
 #Script to run a pipeline that generates genomic sequences from a run of the ibm model
 #
@@ -12,9 +20,9 @@ set -e #Make sure the script stops if any errors occur
 #run_number is the actual line to read
 #num_runs, is how many runs starting from run_number you are interested in 
 main_dir=$1
-num_lines=$2
+num_lines=$SGE_TASK_ID
 counterfactual=0
-run_number=$2
+run_number=$SGE_TASK_ID
 num_runs=1
 
 model_dir='.'
@@ -31,8 +39,8 @@ mkdir -p "${fixed_param_dir}/Output"
 
 #2 make one run
 
-#(cd $model_dir/src; ./popart-simul.exe "$main_dir/$fixed_param_dir" $num_lines $counterfactual $run_number $num_runs)
-#cp "$main_dir/$fixed_param_dir/Output/"phylo*Run${run_number}_* $main_dir/$Output_dir
+(cd $model_dir/src; ./popart-simul.exe "$main_dir/$fixed_param_dir" $num_lines $counterfactual $run_number $num_runs)
+cp "$main_dir/$fixed_param_dir/Output/"phylo*Run${run_number}_* $main_dir/$Output_dir
 
 #3 generate .favites out of transmission files
 args_t='--start_date 1970 --end_date 2018'
@@ -60,7 +68,7 @@ out_phylo_newick="$main_dir/$Output_dir/phylogenetic_Run${run_number}.newick"
 phylo_filename="$main_dir/$Output_dir/statistics_runs.csv"
 #5 Compute statistics from the phylogenetic tree 
 
-Rscript phylostatistics.R $out_phylo_newick $phylo_filename $run_number 
+#Rscript phylostatistics.R $out_phylo_newick $phylo_filename $run_number 
 
 #6 ????
 

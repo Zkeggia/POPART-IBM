@@ -14,7 +14,7 @@
 # Executing instructions:
 #	./popart-simul.exe Zambia
 
-GSLFLAGS= -lgsl -lgslcblas -lm -O3
+GSLFLAGS= -lgsl -lgslcblas -lm -O3 
 LFLAGS = ${GSLFLAGS}
 
 # all the C files (*.c)
